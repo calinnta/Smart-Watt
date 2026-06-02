@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartWatt — Calculator Consum Energie</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --border: #1e2d45;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --green: #00ff88;
+    --text: #e8f0fe;
+    --muted: #6b7a99;
+    --danger: #ff4560;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    padding: 40px 0 30px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+
+  .logo-block h1 {
+    font-size: 2.8rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+
+  .logo-block h1 span {
+    color: var(--accent);
+    text-shadow: 0 0 30px rgba(0,229,255,0.5);
+  }
+
+  .logo-block p {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 6px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .tariff-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    text-align: right;
+  }
+
+  .tariff-box label {
+    display: block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .tariff-box input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    width: 80px;
+    text-align: right;
+  }
+
+  .tariff-box span {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 36px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+  }
+
+  .stat-card.active::after { transform: scaleX(1); }
+
+  .stat-card label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .stat-card .value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .stat-card .unit {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .stat-card.accent .value { color: var(--accent); }
+  .stat-card.orange .value { color: var(--accent2); }
+  .stat-card.green .value { color: var(--green); }
+  .stat-card.danger .value { color: var(--danger); }
+
+  /* Appliance section */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .section-header h2 {
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .btn-add {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-add:hover {
+    background: var(--accent);
+    color: var(--bg);
+    box-shadow: 0 0 20px rgba(0,229,255,0.3);
+  }
+
+  /* Appliance list */
+  #appliance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 30px;
+  }
+
+  .appliance-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: 32px 1fr 110px 110px 90px 90px auto;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.2s, transform 0.2s;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .appliance-row:hover {
+    border-color: rgba(0,229,255,0.25);
+    transform: translateX(2px);
+  }
+
+  .row-icon {
+    font-size: 1.4rem;
+    text-align: center;
+  }
+
+  .appliance-row input, .appliance-row select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    padding: 8px 10px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+
+  .appliance-row input:focus, .appliance-row select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,229,255,0.1);
+  }
+
+  .appliance-row select option { background: var(--surface2); }
+
+  .col-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .consumption-badge {
+    text-align: right;
+  }
+
+  .consumption-badge .kwh {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .consumption-badge .cost {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .btn-delete {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .btn-delete:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: rgba(255,69,96,0.08);
+  }
+
+  /* Presets */
+  .presets {
+    margin-bottom: 30px;
+  }
+
+  .presets-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .preset-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 14px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,229,255,0.05);
+  }
+
+  /* Recommendations */
+  #recommendations {
+    margin-top: 10px;
+  }
+
+  .rec-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--green);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    animation: slideIn 0.3s ease;
+  }
+
+  .rec-card.warning { border-left-color: var(--accent2); }
+  .rec-card.danger { border-left-color: var(--danger); }
+
+  .rec-text {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--text);
+  }
+
+  .rec-text strong { color: var(--green); }
+  .rec-card.warning .rec-text strong { color: var(--accent2); }
+  .rec-card.danger .rec-text strong { color: var(--danger); }
+
+  .rec-saving {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--green);
+    white-space: nowrap;
+    font-weight: 700;
+  }
+
+  .rec-card.warning .rec-saving { color: var(--accent2); }
+
+  /* Efficiency score */
+  .score-section {
+    margin-top: 36px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 28px 30px;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+  }
+
+  .score-ring {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    flex-shrink: 0;
+  }
+
+  .score-ring svg {
+    transform: rotate(-90deg);
+    width: 100px;
+    height: 100px;
+  }
+
+  .score-ring .ring-bg {
+    fill: none;
+    stroke: var(--surface2);
+    stroke-width: 8;
+  }
+
+  .score-ring .ring-fill {
+    fill: none;
+    stroke: var(--green);
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s ease, stroke 0.4s;
+  }
+
+  .score-number {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+
+  .score-number span {
+    font-size: 1.8rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--green);
+    transition: color 0.4s;
+  }
+
+  .score-number small {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .score-info h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .score-info p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* Formulas panel */
+  .formulas {
+    margin-top: 36px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 24px;
+  }
+
+  .formulas h3 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .formula-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  .formula-item {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+  }
+
+  .formula-item .eq {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .formula-item .desc {
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* Column headers */
+  .list-header {
+    display: grid;
+    grid-template-columns: 32px 1fr 110px 110px 90px 90px auto;
+    gap: 12px;
+    padding: 0 20px;
+    margin-bottom: 6px;
+  }
+
+  .list-header span {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 700px) {
+    .stats-bar { grid-template-columns: repeat(2,1fr); }
+    .appliance-row { grid-template-columns: 1fr 1fr; }
+    .list-header { display: none; }
+    .formula-grid { grid-template-columns: repeat(2,1fr); }
+    header { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .logo-block h1 { font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo-block">
+      <h1>Smart<span>Watt</span></h1>
+      <p>Calculator consum energie electrică &mdash; W = P · t</p>
+    </div>
+    <div class="tariff-box">
+      <label>Tarif energie</label>
+      <input type="number" id="tariff" value="0.90" step="0.01" min="0.1">
+      <span>lei / kWh</span>
+    </div>
+  </header>
+
+  <!-- Stats -->
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat-card accent" id="sc-monthly">
+      <label>Consum lunar</label>
+      <div class="value" id="val-monthly">0</div>
+      <div class="unit">kWh / lună</div>
+    </div>
+    <div class="stat-card orange" id="sc-cost">
+      <label>Cost lunar</label>
+      <div class="value" id="val-cost">0</div>
+      <div class="unit">lei / lună</div>
+    </div>
+    <div class="stat-card green" id="sc-savings">
+      <label>Economii posibile</label>
+      <div class="value" id="val-savings">0</div>
+      <div class="unit">lei / an</div>
+    </div>
+    <div class="stat-card danger" id="sc-standby">
+      <label>Pierderi stand-by</label>
+      <div class="value" id="val-standby">0</div>
+      <div class="unit">lei / an</div>
+    </div>
+  </div>
+
+  <!-- Presets -->
+  <div class="presets">
+    <div class="presets-title">⚡ Adaugă rapid</div>
+    <div class="preset-chips" id="preset-chips"></div>
+  </div>
+
+  <!-- Appliances -->
+  <div class="section-header">
+    <h2>Aparate electrice</h2>
+    <button class="btn-add" onclick="addAppliance()">
+      <span>+</span> Adaugă aparat
+    </button>
+  </div>
+
+  <div class="list-header">
+    <span></span>
+    <span>Nume aparat</span>
+    <span>Putere (W)</span>
+    <span>Ore/zi</span>
+    <span>Stand-by (W)</span>
+    <span>kWh/lună</span>
+    <span></span>
+  </div>
+
+  <div id="appliance-list"></div>
+
+  <!-- Recommendations -->
+  <div class="section-header" style="margin-top:30px;">
+    <h2>Recomandări optimizare</h2>
+  </div>
+  <div id="recommendations"><p style="color:var(--muted);font-size:0.85rem;">Adaugă aparate pentru a vedea recomandările personalizate.</p></div>
+
+  <!-- Score -->
+  <div class="score-section">
+    <div class="score-ring">
+      <svg viewBox="0 0 100 100">
+        <circle class="ring-bg" cx="50" cy="50" r="42"/>
+        <circle class="ring-fill" id="ring-fill" cx="50" cy="50" r="42"
+          stroke-dasharray="263.9" stroke-dashoffset="263.9"/>
+      </svg>
+      <div class="score-number">
+        <span id="score-val">—</span>
+        <small>/100</small>
+      </div>
+    </div>
+    <div class="score-info">
+      <h3 id="score-label">Adaugă aparate</h3>
+      <p id="score-desc">Scorul de eficiență se calculează pe baza aparatelor introduse, ponderat după clase energetice, consum stand-by și ore de utilizare.</p>
+    </div>
+  </div>
+
+  <!-- Formulas -->
+  <div class="formulas">
+    <h3>Formule fizice utilizate</h3>
+    <div class="formula-grid">
+      <div class="formula-item">
+        <div class="eq">W = P · t</div>
+        <div class="desc">Energie = Putere × Timp<br>reducând P sau t scade consumul</div>
+      </div>
+      <div class="formula-item">
+        <div class="eq">P = U · I</div>
+        <div class="desc">Putere = Tensiune × Curent<br>LED: curent mic → putere mică</div>
+      </div>
+      <div class="formula-item">
+        <div class="eq">η = W<sub>util</sub>/W<sub>total</sub></div>
+        <div class="desc">Eficiență energetică<br>LED: η≈45% vs. incand: η≈5%</div>
+      </div>
+      <div class="formula-item">
+        <div class="eq">P = I² · R</div>
+        <div class="desc">Putere disipată pe rezistență<br>pierderi în rețeaua electrică</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const PRESETS = [
+  { icon:'💡', name:'Bec incandescent', watts:60, hours:5, standby:0, type:'lighting' },
+  { icon:'💡', name:'Bec LED', watts:9, hours:5, standby:0, type:'lighting' },
+  { icon:'📺', name:'Televizor', watts:80, hours:4, standby:8, type:'entertainment' },
+  { icon:'❄️', name:'Frigider', watts:150, hours:24, standby:0, type:'appliance' },
+  { icon:'🫧', name:'Mașină de spălat', watts:2000, hours:1, standby:3, type:'appliance' },
+  { icon:'🖥️', name:'Calculator desktop', watts:180, hours:6, standby:5, type:'office' },
+  { icon:'📱', name:'Încărcător telefon', watts:18, hours:2, standby:2, type:'office' },
+  { icon:'🌡️', name:'Aer condiționat', watts:1200, hours:6, standby:5, type:'climate' },
+  { icon:'☀️', name:'Panou solar 5kWp', watts:-5000, hours:5, standby:0, type:'solar' },
+];
+
+let appliances = [];
+let idCounter = 0;
+
+// Render presets
+const chipsEl = document.getElementById('preset-chips');
+PRESETS.forEach(p => {
+  const chip = document.createElement('button');
+  chip.className = 'chip';
+  chip.innerHTML = `${p.icon} ${p.name}`;
+  chip.onclick = () => addAppliance(p);
+  chipsEl.appendChild(chip);
+});
+
+function addAppliance(preset = null) {
+  const id = ++idCounter;
+  const app = preset
+    ? { id, ...preset }
+    : { id, icon:'🔌', name:'', watts:100, hours:4, standby:0, type:'appliance' };
+  appliances.push(app);
+  renderList();
+  recalc();
+}
+
+function removeAppliance(id) {
+  appliances = appliances.filter(a => a.id !== id);
+  renderList();
+  recalc();
+}
+
+function updateAppliance(id, field, value) {
+  const app = appliances.find(a => a.id === id);
+  if (app) {
+    app[field] = field === 'name' ? value : parseFloat(value) || 0;
+    recalc();
+    // update badge
+    const row = document.querySelector(`[data-id="${id}"]`);
+    if (row) updateBadge(row, app);
+  }
+}
+
+function updateBadge(row, app) {
+  const tariff = parseFloat(document.getElementById('tariff').value) || 0.90;
+  const kwh = calcKwh(app);
+  const cost = kwh * tariff;
+  const badge = row.querySelector('.consumption-badge');
+  if (badge) {
+    const sign = kwh < 0 ? '' : '';
+    badge.querySelector('.kwh').textContent = (kwh >= 0 ? '' : '−') + Math.abs(kwh).toFixed(1) + ' kWh';
+    badge.querySelector('.cost').style.color = kwh < 0 ? 'var(--green)' : 'var(--muted)';
+    badge.querySelector('.cost').textContent = (kwh < 0 ? '−' : '') + Math.abs(cost).toFixed(2) + ' lei';
+  }
+}
+
+function calcKwh(app) {
+  // active + standby (24 - hours)
+  const active = (app.watts * app.hours * 30) / 1000;
+  const standby = (app.standby * (24 - app.hours) * 30) / 1000;
+  return active + standby;
+}
+
+function renderList() {
+  const list = document.getElementById('appliance-list');
+  list.innerHTML = '';
+  appliances.forEach(app => {
+    const tariff = parseFloat(document.getElementById('tariff').value) || 0.90;
+    const kwh = calcKwh(app);
+    const cost = kwh * tariff;
+    const isSolar = app.watts < 0;
+
+    const row = document.createElement('div');
+    row.className = 'appliance-row';
+    row.dataset.id = app.id;
+    row.innerHTML = `
+      <div class="row-icon">${app.icon}</div>
+      <div>
+        <div class="col-label">Aparat</div>
+        <input type="text" value="${app.name}" placeholder="ex: Frigider" 
+          onchange="updateAppliance(${app.id},'name',this.value)"
+          oninput="updateAppliance(${app.id},'name',this.value)">
+      </div>
+      <div>
+        <div class="col-label">Putere (W)</div>
+        <input type="number" value="${Math.abs(app.watts)}" min="0" step="1"
+          oninput="updateAppliance(${app.id},'watts',${isSolar?'-':'+'}+this.value)">
+      </div>
+      <div>
+        <div class="col-label">Ore / zi</div>
+        <input type="number" value="${app.hours}" min="0" max="24" step="0.5"
+          oninput="updateAppliance(${app.id},'hours',this.value)">
+      </div>
+      <div>
+        <div class="col-label">Stand-by (W)</div>
+        <input type="number" value="${app.standby}" min="0" step="0.5"
+          oninput="updateAppliance(${app.id},'standby',this.value)">
+      </div>
+      <div class="consumption-badge">
+        <div class="col-label">Consum/lună</div>
+        <div class="kwh" style="color:${isSolar?'var(--green)':'var(--accent)'}">${isSolar?'−':''}${Math.abs(kwh).toFixed(1)} kWh</div>
+        <div class="cost" style="color:${isSolar?'var(--green)':'var(--muted)'}">${isSolar?'−':''}${Math.abs(cost).toFixed(2)} lei</div>
+      </div>
+      <button class="btn-delete" onclick="removeAppliance(${app.id})">✕</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function recalc() {
+  const tariff = parseFloat(document.getElementById('tariff').value) || 0.90;
+
+  let totalKwh = 0;
+  let totalStandbyKwh = 0;
+  let potentialSavings = 0;
+  let scorePoints = 0;
+  let scoreMax = 0;
+
+  appliances.forEach(app => {
+    const kwh = calcKwh(app);
+    totalKwh += kwh;
+
+    const standbyKwh = (app.standby * (24 - app.hours) * 30) / 1000;
+    totalStandbyKwh += standbyKwh;
+
+    // Score
+    scoreMax += 10;
+    if (app.standby === 0) scorePoints += 10;
+    else if (app.standby <= 2) scorePoints += 8;
+    else if (app.standby <= 5) scorePoints += 5;
+    else scorePoints += 2;
+  });
+
+  // LED savings
+  appliances.forEach(app => {
+    if (app.watts >= 40 && app.type === 'lighting') {
+      const ledWatts = app.watts * 0.15;
+      const savedKwh = ((app.watts - ledWatts) * app.hours * 30 * 12) / 1000;
+      potentialSavings += savedKwh * tariff;
+    }
+  });
+  // standby savings
+  potentialSavings += totalStandbyKwh * 12 * tariff;
+
+  const monthlyCost = totalKwh * tariff;
+  const standbyAnnualCost = totalStandbyKwh * 12 * tariff;
+  const score = scoreMax > 0 ? Math.round((scorePoints / scoreMax) * 100) : 0;
+
+  // Animate numbers
+  animateVal('val-monthly', totalKwh.toFixed(1));
+  animateVal('val-cost', monthlyCost.toFixed(2));
+  animateVal('val-savings', potentialSavings.toFixed(0));
+  animateVal('val-standby', standbyAnnualCost.toFixed(0));
+
+  // Score ring
+  const circumference = 263.9;
+  const offset = circumference - (score / 100) * circumference;
+  const ring = document.getElementById('ring-fill');
+  ring.style.strokeDashoffset = offset;
+  ring.style.stroke = score >= 70 ? 'var(--green)' : score >= 40 ? 'var(--accent2)' : 'var(--danger)';
+  document.getElementById('score-val').textContent = appliances.length > 0 ? score : '—';
+  document.getElementById('score-val').style.color = score >= 70 ? 'var(--green)' : score >= 40 ? 'var(--accent2)' : 'var(--danger)';
+
+  const labels = {
+    high: ['Gospodărie eficientă 🎯', 'Consumul tău este bine optimizat. Stand-by redus, aparate eficiente.'],
+    mid: ['Potențial de îmbunătățire ⚡', 'Există oportunități clare de reducere a consumului. Consultă recomandările.'],
+    low: ['Consum ridicat 🔴', 'Gospodăria ta pierde energie semnificativă. Prioritizează recomandările de mai jos.'],
+  };
+  const [lbl, ldesc] = score >= 70 ? labels.high : score >= 40 ? labels.mid : labels.low;
+  if (appliances.length > 0) {
+    document.getElementById('score-label').textContent = lbl;
+    document.getElementById('score-desc').textContent = ldesc;
+  }
+
+  // Recommendations
+  buildRecommendations(tariff, totalStandbyKwh, standbyAnnualCost);
+}
+
+function animateVal(id, target) {
+  document.getElementById(id).textContent = target;
+}
+
+function buildRecommendations(tariff, totalStandbyKwh, standbyAnnualCost) {
+  const recs = [];
+
+  // LED check
+  appliances.forEach(app => {
+    if (app.type === 'lighting' && app.watts >= 40) {
+      const saving = ((app.watts * 0.85) * app.hours * 30 * 12 / 1000) * tariff;
+      recs.push({
+        type: 'green',
+        text: `<strong>Înlocuiește "${app.name || 'becul'}" cu LED</strong> — același flux luminos la 85% mai puțin consum (${app.watts}W → ${Math.round(app.watts*0.15)}W)`,
+        saving: `+${saving.toFixed(0)} lei/an`
+      });
+    }
+  });
+
+  // Stand-by check
+  if (standbyAnnualCost > 20) {
+    recs.push({
+      type: 'warning',
+      text: `<strong>Stand-by: ${totalStandbyKwh.toFixed(0)} kWh/lună</strong> consumate fără niciun beneficiu. Folosește prize cu întreruptor.`,
+      saving: `${standbyAnnualCost.toFixed(0)} lei/an risipiți`
+    });
+  }
+
+  // AC check
+  const ac = appliances.find(a => a.name.toLowerCase().includes('condiționat') || a.name.toLowerCase().includes('ac'));
+  if (ac) {
+    const saving = (ac.watts * ac.hours * 0.12 * 30 * 12 / 1000) * tariff;
+    recs.push({
+      type: 'green',
+      text: `<strong>Setează A/C la 24-26°C vara</strong> — fiecare grad în plus = +6% consum. Termostat inteligent: economie 10-15%.`,
+      saving: `~${saving.toFixed(0)} lei/an`
+    });
+  }
+
+  // Washing machine
+  const wm = appliances.find(a => a.name.toLowerCase().includes('spălat'));
+  if (wm) {
+    const saving = (wm.watts * wm.hours * 0.30 * 30 * 12 / 1000) * tariff;
+    recs.push({
+      type: 'green',
+      text: `<strong>Programul Eco la mașina de spălat</strong> — spălare la 30-40°C în loc de 60°C reduce consumul cu ~30%.`,
+      saving: `~${saving.toFixed(0)} lei/an`
+    });
+  }
+
+  // Solar suggestion
+  const hasSolar = appliances.some(a => a.watts < 0);
+  if (!hasSolar && appliances.length > 3) {
+    const totalAnnual = appliances.reduce((s,a) => s + calcKwh(a), 0) * 12 * tariff;
+    if (totalAnnual > 500) {
+      recs.push({
+        type: 'green',
+        text: `<strong>Investiție în panouri fotovoltaice</strong> — un sistem 5 kWp generează ~5.500 kWh/an. Amortizare în 5-8 ani, durată de viață 25+ ani.`,
+        saving: `~${(5500 * tariff).toFixed(0)} lei/an generat`
+      });
+    }
+  }
+
+  const recEl = document.getElementById('recommendations');
+  if (recs.length === 0 && appliances.length > 0) {
+    recEl.innerHTML = `<p style="color:var(--green);font-size:0.85rem;">✓ Gospodăria ta pare bine optimizată. Continuă să monitorizezi consumul.</p>`;
+    return;
+  }
+  if (recs.length === 0) {
+    recEl.innerHTML = `<p style="color:var(--muted);font-size:0.85rem;">Adaugă aparate pentru a vedea recomandările personalizate.</p>`;
+    return;
+  }
+
+  recEl.innerHTML = recs.map(r => `
+    <div class="rec-card ${r.type}">
+      <div class="rec-text">${r.text}</div>
+      <div class="rec-saving">${r.saving}</div>
+    </div>
+  `).join('');
+}
+
+// Tariff change
+document.getElementById('tariff').addEventListener('input', () => {
+  renderList();
+  recalc();
+});
+
+// Load a default set
+[
+  PRESETS[2], // TV
+  PRESETS[3], // Frigider
+  { icon:'💡', name:'Becuri incandescente', watts:60, hours:5, standby:0, type:'lighting' },
+  PRESETS[6], // Încărcător
+].forEach(p => addAppliance(p));
+</script>
+</body>
+</html>
